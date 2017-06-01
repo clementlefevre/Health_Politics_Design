@@ -1,0 +1,5 @@
+"0","list.files(path = ""./data/maps/single_anim/"", pattern = ""*.png"", full.names = T) %>% "
+"0","  map(image_read) %>% # reads each path file"
+"0","  image_join() %>% # joins image"
+"0","  image_animate(fps=1) %>% # animates, can opt for number of loops"
+"0","  image_write(""ndwi_aug_hgm.gif"") # write to current dir"

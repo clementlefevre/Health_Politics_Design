@@ -1,0 +1,4 @@
+"0","gato<-df.per.capita %>% gather(year,expenditure,-Country.Name)"
+"0","gato <- gato %>% mutate(year=as.numeric(gsub('X','',year)))"
+"0","gato$Country.Name <- as.factor(gato$Country.Name)"
+"0","gato$Country.Name <- factor(gato$Country.Name,  levels=c(""Low income"",""Lower middle income"",""Low & middle income"",""Middle income"", ""Upper middle income"",""High income""))"

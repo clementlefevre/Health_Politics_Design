@@ -1,0 +1,3 @@
+"0"," top_6 <- c(""Charlottenburg-Wilm."",""Friedrichshain-Kreuzberg"",""Mitte"",""Neukölln"",""Pankow"",""Tempelhof - Schöneberg"")"
+"0","mitte.areas<- c(""Alexanderplatz"",""Brunnenstr. Nord"",""Brunnenstr. Süd"",""Moabit Ost"",""Moabit West"",""Osloer Straße"" , ""Parkviertel"",       ""Regierungsviertel"",""Tiergarten Süd"",""Wedding Zentrum"")"
+"0","df_neighbourhood <- df_neighbourhood %>% filter(neighbourhood_group %in% top_6)"

@@ -1,0 +1,59 @@
+---
+title: "Public Health Data - World Bank"
+output: html_notebook
+---
+
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggthemes)
+library(scales)
+```
+
+
+# Get data
+```{r}
+df.per.capita<- read.csv('data/API_SH.XPD.PCAP_DS2_en_csv_v2.csv',skip = 4,stringsAsFactors = FALSE)
+str(df.per.capita)
+
+
+```
+```{r}
+missing.years<- c(1960:1994,2015:2016)
+missing.years.columns<- paste0("X",missing.years)
+valid.years<- c(1995:2014)
+valid.years.columns<- paste0("X",valid.years)
+df.per.capita<-df.per.capita %>% select(-one_of(missing.years.columns))
+
+## drop the countries with missing data
+df.per.capita<-df.per.capita %>% filter(!is.na(X1995))
+df.per.capita <-df.per.capita %>% filter(grepl("Low income|Lower middle income|Low & middle income|Middle income|Upper middle income|High income",Country.Name))
+str(df.per.capita)
+df.per.capita <- df.per.capita %>% select(one_of(c("Country.Name",valid.years.columns))) 
+
+```
+## Add quartile groups
+```{r}
+# df.per.capita <- df.per.capita %>%    mutate(quartile = ntile(X2014, 4)) %>% arrange((quartile))
+# 
+# groupy <-df.per.capita %>% group_by(quartile) %>% summarise_at(valid.years.columns,funs(mean))
+```
+## Tranpose
+```{r}
+gato<-df.per.capita %>% gather(year,expenditure,-Country.Name)
+gato <- gato %>% mutate(year=as.numeric(gsub('X','',year)))
+gato$Country.Name <- as.factor(gato$Country.Name)
+gato$Country.Name <- factor(gato$Country.Name,  levels=c("Low income","Lower middle income","Low & middle income","Middle income", "Upper middle income","High income"))
+
+
+```
+
+```{r}
+ggplot(data=gato ,aes(x=year,y=expenditure,colour=(Country.Name)))+theme_minimal()+ geom_line(size=1)+labs(colour="")+ theme(axis.title = element_text(), axis.title.x=element_blank(), axis.text.x = element_text(angle = 90, hjust = 1),legend.text=element_text(size=10),plot.caption=element_text(size=8))+ ggtitle("Health expenditure per capita (current US$)")+ylab("$US") + scale_colour_brewer(palette = "RdPu")
+
+
+```
+

@@ -1,0 +1,9 @@
+{
+    "path" : "~/wk/airbnb_berlin",
+    "sortOrder" : [
+        {
+            "ascending" : true,
+            "columnIndex" : 2
+        }
+    ]
+}

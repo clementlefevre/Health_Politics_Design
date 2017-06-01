@@ -1,0 +1,3 @@
+"0","# df.per.capita <- df.per.capita %>%    mutate(quartile = ntile(X2014, 4)) %>% arrange((quartile))"
+"0","# "
+"0","# groupy <-df.per.capita %>% group_by(quartile) %>% summarise_at(valid.years.columns,funs(mean))"

@@ -1,0 +1,2 @@
+"0","df_light<-read.csv('data/listings/2017_05.csv',stringsAsFactors = FALSE)"
+"0","# df_light<- df_light %>% filter(grepl('Mitte',neighbourhood_group))"
