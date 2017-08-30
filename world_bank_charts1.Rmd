@@ -67,7 +67,7 @@ ggplot(data=gato ,aes(x=year,y=log(expenditure),colour=(Country.Name)))+theme_mi
 ```{r}
 df2<-read.csv('data/dataset2.csv',stringsAsFactors = FALSE)
 
-ggplot(df2,aes(x=Steuerfinanzierte.Gesundheitsausgaben,y=Ausgaben.von.Pflichtkrankenversicherungen,label=CODE))+  geom_text(check_overlap = TRUE,size=4,color="#7a0177")+labs(x='Steuerfinanzierte Gesundheitsausgaben',y='Ausgaben von Pflichtkrankenversicherungen')
+ggplot(df2,aes(x=Steuerfinanzierte.Gesundheitsausgaben,y=Ausgaben.von.Pflichtkrankenversicherungen,label=CODE))+  geom_text(check_overlap = TRUE,size=4,color="#7a0177")+labs(x='Steuerfinanzierte Gesundheitsausgaben (%)',y='Ausgaben von Pflichtkrankenversicherungen (%)')
 
 ```
 
