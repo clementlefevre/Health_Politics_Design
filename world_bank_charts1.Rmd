@@ -20,49 +20,63 @@ library(ellipse)
 
 # Get data
 ```{r}
-df.per.capita<- read.csv('data/API_SH.XPD.PCAP_DS2_en_csv_v2.csv',skip = 4,stringsAsFactors = FALSE)
-#df.per.capita<- read.csv('data/API_SH.XPD.PUBL_DS2_en_csv_v2.csv',skip = 4,stringsAsFactors = FALSE)
 
-missing.years<- c(1960:1994,2015:2016)
-missing.years.columns<- paste0("X",missing.years)
-valid.years<- c(1995:2014)
-valid.years.columns<- paste0("X",valid.years)
-df.per.capita<-df.per.capita %>% select(-one_of(missing.years.columns))
+files<-c('data/API_SH.XPD.PCAP_DS2_en_csv_v2.csv','data/API_SH.XPD.PUBL_DS2_en_csv_v2.csv')
 
-## drop the countries with missing data
-df.per.capita<-df.per.capita %>% filter(!is.na(X1995))
-df.per.capita <-df.per.capita %>% filter(grepl("Low income|Lower middle income|Upper middle income|High income",Country.Name))
-str(df.per.capita)
-df.per.capita <- df.per.capita %>% select(one_of(c("Country.Name",valid.years.columns))) 
+prepare_data<-function(file_name,use_log){
+  df1<- read.csv(file_name,skip = 4,stringsAsFactors = FALSE)
+  
+  missing.years<- c(1960:1994,2015:2016)
+  missing.years.columns<- paste0("X",missing.years)
+  valid.years<- c(1995:2014)
+  valid.years.columns<- paste0("X",valid.years)
+  df1<-df1 %>% select(-one_of(missing.years.columns))
+  
+  ## drop the countries with missing data
+  df1<-df1 %>% filter(!is.na(X1995))
+  df1 <-df1 %>% filter(grepl("Low income|Lower middle income|Upper middle income|High income",Country.Name))
+  
+  df1 <- df1 %>% select(one_of(c("Country.Name",valid.years.columns))) 
+  
+  #Transpose
+  gato<-df1 %>% gather(year,expenditure,-Country.Name)
+  gato <- gato %>% mutate(year=as.numeric(gsub('X','',year)))
+  gato$Country.Name <- as.factor(gato$Country.Name)
+  gato$Country.Name <- factor(gato$Country.Name,  levels=rev(c("Low income","Lower middle income","Low & middle income","Middle income", "Upper middle income","High income")))
+  
+  if(use_log){
+    gato$expenditure_log<-log(gato$expenditure)
+  }
+
+return(gato)
+}
 
 ```
-## Add quartile groups
-```{r}
-# df.per.capita <- df.per.capita %>%    mutate(quartile = ntile(X2014, 4)) %>% arrange((quartile))
-# 
-# groupy <-df.per.capita %>% group_by(quartile) %>% summarise_at(valid.years.columns,funs(mean))
-```
-## Tranpose
-```{r}
-gato<-df.per.capita %>% gather(year,expenditure,-Country.Name)
-gato <- gato %>% mutate(year=as.numeric(gsub('X','',year)))
-gato$Country.Name <- as.factor(gato$Country.Name)
-gato$Country.Name <- factor(gato$Country.Name,  levels=rev(c("Low income","Lower middle income","Low & middle income","Middle income", "Upper middle income","High income")))
 
 
-```
-
 ```{r}
+
+gato<-prepare_data(file_name[1],TRUE)
 colors.vector<- rev(c("#fa9fb5","#f768a1","#c51b8a","#7a0177"))
 
 title<- c("Gesundheitsausgaben pro Kopf in US $","$US")
 #title<- c("Öffentliche Gesundheitsausgaben als Anteil der Gesamtgesundheitsausgaben","%")
 
 
+ggplot(data=gato ,aes(x=year,y=(expenditure),colour=(Country.Name)))+theme_minimal()+ geom_line(size=1)+labs(colour="")+ theme(axis.title = element_text(), axis.title.x=element_blank(), axis.text.x = element_text(angle = 90, hjust = 1),legend.text=element_text(size=10),plot.caption=element_text(size=8))+ ggtitle(title[1])+ylab(title[2]) + scale_colour_manual(values = colors.vector, labels = (c("Länder mit hohem Einkommen","Länder mit gehobenem mittleren Einkommen","Länder mit niedrigem mittleren Einkommen","Länder mit niedrigem Einkommen")))+  guides(fill = guide_legend(nrow = 2,ncol = 2, title.hjust = 0.4))+  guides(col = guide_legend(nrow = 2))+  theme(legend.position="bottom")+ scale_y_log10(breaks=c(.01,.1,10,100,1000,2000,3000,5000)) + annotation_logticks(sides='r')
 
-ggplot(data=gato ,aes(x=year,y=log(expenditure),colour=(Country.Name)))+theme_minimal()+ geom_line(size=1)+labs(colour="")+ theme(axis.title = element_text(), axis.title.x=element_blank(), axis.text.x = element_text(angle = 90, hjust = 1),legend.text=element_text(size=10),plot.caption=element_text(size=8))+ ggtitle(title[1])+ylab(title[2]) + scale_colour_manual(values = colors.vector, labels = (c("Länder mit hohem Einkommen","Länder mit gehobenem mittleren Einkommen","Länder mit niedrigem mittleren Einkommen","Länder mit niedrigem Einkommen")))+  guides(fill = guide_legend(nrow = 2,ncol = 2, title.hjust = 0.4))+  guides(col = guide_legend(nrow = 2))+  theme(legend.position="bottom")
+```
+```{r}
+
+gato<-prepare_data(file_name[2],use_log = FALSE)
+colors.vector<- rev(c("#fa9fb5","#f768a1","#c51b8a","#7a0177"))
+
+title<- c("Gesundheitsausgaben pro Kopf in US $","$US")
+title<- c("Öffentliche Gesundheitsausgaben als Anteil der Gesamtgesundheitsausgaben","%")
 
 
+ggplot(data=gato ,aes(x=year,y=(expenditure),colour=(Country.Name)))+theme_minimal()+ geom_line(size=1)+labs(colour="")+ theme(axis.title = element_text(), axis.title.x=element_blank(), axis.text.x = element_text(angle = 90, hjust = 1),legend.text=element_text(size=10),plot.caption=element_text(size=8))+ ggtitle(title[1])+ylab(title[2]) + scale_colour_manual(values = colors.vector, labels = (c("Länder mit hohem Einkommen","Länder mit gehobenem mittleren Einkommen","Länder mit niedrigem mittleren Einkommen","Länder mit niedrigem Einkommen")))+  guides(fill = guide_legend(nrow = 2,ncol = 2, title.hjust = 0.4))+  guides(col = guide_legend(nrow = 2))+  theme(legend.position="bottom")
+  
 ```
 
 ```{r}
@@ -77,35 +91,28 @@ df2<-df2 %>% mutate(group=ifelse(Steuerfinanzierte.Gesundheitsausgaben<35,"Sozia
 df2<-df2 %>% mutate(group=ifelse(CODE %in% CODE_TO_EXCLUDE_FROM_ELLIPSE,"-",group))
 df2$group<-as.factor(df2$group)
 
-ggplot(df2,aes(x=Steuerfinanzierte.Gesundheitsausgaben,y=Ausgaben.von.Pflichtkrankenversicherungen))+  geom_text(check_overlap = TRUE,size=4,color="#7a0177",aes(label = CODE, colour = factor(group)), size = 4) +labs(x='Steuerfinanzierte Gesundheitsausgaben (%)',y='Ausgaben von Pflichtkrankenversicherungen (%)')
 
 ```
 
-```{r}
-
-# create ellipsis :
-df_ell<-data.frame()
-for(g in levels(df2$group)){
-  if (g!='-'){
-    df_ell <- rbind(df_ell, cbind(as.data.frame(with(df2[df2$group==g,], ellipse(cor(Steuerfinanzierte.Gesundheitsausgaben, Ausgaben.von.Pflichtkrankenversicherungen), 
-                                         scale=c(sd(Steuerfinanzierte.Gesundheitsausgaben),sd(Ausgaben.von.Pflichtkrankenversicherungen)), 
-                                         centre=c(mean(Steuerfinanzierte.Gesundheitsausgaben),mean(Ausgaben.von.Pflichtkrankenversicherungen))))),group=g))
-    
-  }
 
 
-
-}
-
-```
-
-```{r}
-p <- ggplot(df2,aes(x=Steuerfinanzierte.Gesundheitsausgaben,y=Ausgaben.von.Pflichtkrankenversicherungen))+  geom_text(check_overlap = TRUE,aes(label = CODE, colour = factor(group)),fontface = "bold", size = 3,show.legend = TRUE,font=TRUE) +labs(x='Steuerfinanzierte Gesundheitsausgaben (%)',y='Ausgaben von Pflichtkrankenversicherungen (%)')+theme(legend.title=element_blank())+labs(text = "")+scale_colour_brewer(palette = "Set2")#+geom_label(aes(fill = factor(group),label = CODE),size=2, colour = "white", fontface = "bold")
+```{r }
+p <- ggplot(df2,aes(x=Steuerfinanzierte.Gesundheitsausgaben,y=Ausgaben.von.Pflichtkrankenversicherungen))+  geom_text(check_overlap = TRUE,aes(label = CODE, colour = factor(group)),fontface = "bold", size = 5,show.legend = TRUE,font=TRUE) +labs(x='Steuerfinanzierte Gesundheitsausgaben (%)',y='Ausgaben von Pflichtkrankenversicherungen (%)')+theme(legend.title=element_blank())+labs(text = "")+scale_colour_brewer(palette = "Set2")#+geom_label(aes(fill = factor(group),label = CODE),size=2, colour = "white", fontface = "bold")
 #p<-p+geom_path(data=df_ell, aes(x=x, y=y,colour=group), size=0.5, linetype=1)
 p
 
 ```
 
+```{r, fig.width=8,fig.height=8}
+ggplot(df2)+  geom_point(aes(Steuerfinanzierte.Gesundheitsausgaben,Ausgaben.von.Pflichtkrankenversicherungen), size = 1, color = '#1a0000') +
+  geom_label_repel(
+    aes(Steuerfinanzierte.Gesundheitsausgaben, Ausgaben.von.Pflichtkrankenversicherungen, fill = factor(group), label = CODE),
+    fontface = 'bold', color = 'white', size = 2.5,
+    box.padding = unit(0.15, "lines"),
+    point.padding = unit(0.1, "lines"),
+    segment.color = 'grey50'
+  )+labs(x='Steuerfinanzierte Gesundheitsausgaben (%)',y='Ausgaben von Pflichtkrankenversicherungen (%)')+theme(legend.title=element_blank(),legend.position="bottom",legend.direction="vertical")+labs(text = "")+scale_fill_brewer(palette = "Set2") +coord_fixed()
+
+#+ scale_fill_manual(values = setNames(c("lightblue", "darkgreen",'pink'), levels(df2$group)))
 
 ```
-
