@@ -1,8 +1,0 @@
-"0","pal <- colorQuantile("
-"0","  palette = ""YlGnBu"","
-"0","  n = 4,"
-"0","  domain = df_light$reviews_per_month)"
-"0","m2<-leaflet(data = df_light) %>% addTiles() %>%   addProviderTiles(providers$CartoDB.Positron)%>%"
-"0","  addCircleMarkers(~longitude, ~latitude, popup = ~as.character(name), label = ~as.character(name),stroke = FALSE, fillOpacity = 0.8,color = ~pal(reviews_per_month),radius=4) %>%   addLegend(""bottomright"", pal = pal, values = ~reviews_per_month,title = ""Price per night - Quartiles"",labFormat = labelFormat(prefix = ""€"")) %>% addLegend(""topright"",title = ""Berlin Wall"",col=1,labels=1) %>%  addGeoJSON(geojson)"
-"0","  "
-"0","m2"

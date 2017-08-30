@@ -1,6 +1,0 @@
-"0","for (filo in filos){"
-"0","  file_path = paste0(""data/listings/"",filo)"
-"0","  "
-"0","  df<-read.csv(file_path, stringsAsFactors = FALSE)"
-"0","  plot_map(df,filo)"
-"0","}"

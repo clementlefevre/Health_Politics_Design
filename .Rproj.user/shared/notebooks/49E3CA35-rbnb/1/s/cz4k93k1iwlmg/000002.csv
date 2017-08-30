@@ -1,7 +1,0 @@
-"0","ggmap_berlin<- get_map(location = c(left = range_lon[1], bottom = range_lat[1], right ="
-"0","  range_lon[2], top = range_lat[2]),source=""google"",color=""bw"")"
-"2","bounding box given to google - spatial extent only approximate."
-"2","converting bounding box to center/zoom specification. (experimental)
-"
-"2","Map from URL : http://maps.googleapis.com/maps/api/staticmap?center=52.53319,13.370769&zoom=13&size=640x640&scale=2&maptype=terrain&language=en-EN&sensor=false
-"

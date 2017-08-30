@@ -1,6 +1,8 @@
 ---
 title: "Public Health Data - World Bank"
-output: html_notebook
+output:
+  html_document: default
+  html_notebook: default
 ---
 
 
@@ -17,11 +19,8 @@ library(scales)
 # Get data
 ```{r}
 df.per.capita<- read.csv('data/API_SH.XPD.PCAP_DS2_en_csv_v2.csv',skip = 4,stringsAsFactors = FALSE)
-str(df.per.capita)
+#df.per.capita<- read.csv('data/API_SH.XPD.PUBL_DS2_en_csv_v2.csv',skip = 4,stringsAsFactors = FALSE)
 
-
-```
-```{r}
 missing.years<- c(1960:1994,2015:2016)
 missing.years.columns<- paste0("X",missing.years)
 valid.years<- c(1995:2014)
@@ -54,16 +53,14 @@ gato$Country.Name <- factor(gato$Country.Name,  levels=rev(c("Low income","Lower
 ```{r}
 colors.vector<- rev(c("#fa9fb5","#f768a1","#c51b8a","#7a0177"))
 
-title1<- c("Gesundheitsausgaben pro Kopf in US $","$US")
-title2<- c("Öffentliche Gesundheitsausgaben als Anteil der Gesamtgesundheitsausgaben","%")
+title<- c("Gesundheitsausgaben pro Kopf in US $","$US")
+#title<- c("Öffentliche Gesundheitsausgaben als Anteil der Gesamtgesundheitsausgaben","%")
 
-title<-title1
 
-ggplot(data=gato ,aes(x=year,y=expenditure,colour=(Country.Name)))+theme_minimal()+ geom_line(size=1)+labs(colour="")+ theme(axis.title = element_text(), axis.title.x=element_blank(), axis.text.x = element_text(angle = 90, hjust = 1),legend.text=element_text(size=10),plot.caption=element_text(size=8))+ ggtitle(title[1])+ylab(title[2]) + scale_colour_manual(values = colors.vector, labels = (c("Länder mit hohem Einkommen","Länder mit gehobenem mittleren Einkommen","Länder mit niedrigem mittleren Einkommen","Länder mit niedrigem Einkommen")))+  guides(fill = guide_legend(nrow = 2,ncol = 2, title.hjust = 0.4))+  guides(col = guide_legend(nrow = 2))+  theme(legend.position="bottom")
+
+ggplot(data=gato ,aes(x=year,y=log(expenditure),colour=(Country.Name)))+theme_minimal()+ geom_line(size=1)+labs(colour="")+ theme(axis.title = element_text(), axis.title.x=element_blank(), axis.text.x = element_text(angle = 90, hjust = 1),legend.text=element_text(size=10),plot.caption=element_text(size=8))+ ggtitle(title[1])+ylab(title[2]) + scale_colour_manual(values = colors.vector, labels = (c("Länder mit hohem Einkommen","Länder mit gehobenem mittleren Einkommen","Länder mit niedrigem mittleren Einkommen","Länder mit niedrigem Einkommen")))+  guides(fill = guide_legend(nrow = 2,ncol = 2, title.hjust = 0.4))+  guides(col = guide_legend(nrow = 2))+  theme(legend.position="bottom")
 
 
 ```
-```{r}
-ggplot(data=gato ,aes(x=year,y=expenditure,colour=(Country.Name)))+ geom_line(size=1)+labs(colour="")+  
-```
+
 
