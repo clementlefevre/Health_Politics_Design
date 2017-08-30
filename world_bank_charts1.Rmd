@@ -14,6 +14,7 @@ library(ggplot2)
 library(ggthemes)
 library(ggrepel)
 library(scales)
+library(ellipse)
 ```
 
 
@@ -66,8 +67,45 @@ ggplot(data=gato ,aes(x=year,y=log(expenditure),colour=(Country.Name)))+theme_mi
 
 ```{r}
 df2<-read.csv('data/dataset2.csv',stringsAsFactors = FALSE)
+df2<- df2 %>% mutate(Ausgaben.von.Pflichtkrankenversicherungen = ifelse(is.na(Ausgaben.von.Pflichtkrankenversicherungen),0,Ausgaben.von.Pflichtkrankenversicherungen))
 
-ggplot(df2,aes(x=Steuerfinanzierte.Gesundheitsausgaben,y=Ausgaben.von.Pflichtkrankenversicherungen,label=CODE))+  geom_text(check_overlap = TRUE,size=4,color="#7a0177")+labs(x='Steuerfinanzierte Gesundheitsausgaben (%)',y='Ausgaben von Pflichtkrankenversicherungen (%)')
+df2<- df2 %>% mutate(Steuerfinanzierte.Gesundheitsausgaben = ifelse(is.na(Steuerfinanzierte.Gesundheitsausgaben),0,Steuerfinanzierte.Gesundheitsausgaben))
+
+
+CODE_TO_EXCLUDE_FROM_ELLIPSE = c('MEX','US','GRE')
+df2<-df2 %>% mutate(group=ifelse(Steuerfinanzierte.Gesundheitsausgaben<35,"Sozialversicherungssysteme","Steuerfinanzierte Systeme"))
+df2<-df2 %>% mutate(group=ifelse(CODE %in% CODE_TO_EXCLUDE_FROM_ELLIPSE,"-",group))
+df2$group<-as.factor(df2$group)
+
+ggplot(df2,aes(x=Steuerfinanzierte.Gesundheitsausgaben,y=Ausgaben.von.Pflichtkrankenversicherungen))+  geom_text(check_overlap = TRUE,size=4,color="#7a0177",aes(label = CODE, colour = factor(group)), size = 4) +labs(x='Steuerfinanzierte Gesundheitsausgaben (%)',y='Ausgaben von Pflichtkrankenversicherungen (%)')
+
+```
+
+```{r}
+
+# create ellipsis :
+df_ell<-data.frame()
+for(g in levels(df2$group)){
+  if (g!='-'){
+    df_ell <- rbind(df_ell, cbind(as.data.frame(with(df2[df2$group==g,], ellipse(cor(Steuerfinanzierte.Gesundheitsausgaben, Ausgaben.von.Pflichtkrankenversicherungen), 
+                                         scale=c(sd(Steuerfinanzierte.Gesundheitsausgaben),sd(Ausgaben.von.Pflichtkrankenversicherungen)), 
+                                         centre=c(mean(Steuerfinanzierte.Gesundheitsausgaben),mean(Ausgaben.von.Pflichtkrankenversicherungen))))),group=g))
+    
+  }
+
+
+
+}
+
+```
+
+```{r}
+p <- ggplot(df2,aes(x=Steuerfinanzierte.Gesundheitsausgaben,y=Ausgaben.von.Pflichtkrankenversicherungen))+  geom_text(check_overlap = TRUE,aes(label = CODE, colour = factor(group)),fontface = "bold", size = 3,show.legend = TRUE,font=TRUE) +labs(x='Steuerfinanzierte Gesundheitsausgaben (%)',y='Ausgaben von Pflichtkrankenversicherungen (%)')+theme(legend.title=element_blank())+labs(text = "")+scale_colour_brewer(palette = "Set2")#+geom_label(aes(fill = factor(group),label = CODE),size=2, colour = "white", fontface = "bold")
+#p<-p+geom_path(data=df_ell, aes(x=x, y=y,colour=group), size=0.5, linetype=1)
+p
+
+```
+
 
 ```
 
