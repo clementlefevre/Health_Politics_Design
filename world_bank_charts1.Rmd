@@ -100,10 +100,10 @@ df2$group<-as.factor(df2$group)
 ggplot(df2)+  geom_point(aes(Steuerfinanzierte.Gesundheitsausgaben,Ausgaben.von.Pflichtkrankenversicherungen), size = 1,shape=21,fill = "grey", size = 2, stroke = 1, colour = 'black') +
   geom_label_repel(
     aes(Steuerfinanzierte.Gesundheitsausgaben, Ausgaben.von.Pflichtkrankenversicherungen, fill = factor(group), label = CODE),
-     color = 'white', size = 2.5,
+     color = 'white', size = 2.8,
     box.padding = unit(0.15, "lines"),
     point.padding = unit(0.1, "lines"),
     segment.color = 'grey50'
-  )+labs(x='Steuerfinanzierte Gesundheitsausgaben (%)',y='Ausgaben von Pflichtkrankenversicherungen (%)')+theme(legend.title=element_blank(),legend.position="bottom",legend.direction="vertical")+labs(text = "")+scale_fill_brewer(palette = "Set2") +coord_fixed()
+  )+labs(x='Steuerfinanzierte Gesundheitsausgaben (%)',y='Ausgaben von Pflichtkrankenversicherungen (%)')+theme(legend.title=element_blank(),legend.position="bottom",legend.direction="vertical")+labs(text = "") +coord_fixed()+scale_fill_brewer(palette = "Set2",breaks=c("Sozialversicherungssysteme","Steuerfinanzierte Systeme"))
 
 ```
