@@ -56,10 +56,10 @@ return(gato)
 
 ```{r}
 
-gato<-prepare_data(file_name[1],TRUE)
+gato<-prepare_data(files[1],TRUE)
 colors.vector<- rev(c("#fa9fb5","#f768a1","#c51b8a","#7a0177"))
 
-title<- c("Gesundheitsausgaben pro Kopf in US $","$US")
+title<- c("Gesundheitsausgaben pro Kopf in Dollar","Konstanter 2011 Dollar (international, KKP)")
 #title<- c("Öffentliche Gesundheitsausgaben als Anteil der Gesamtgesundheitsausgaben","%")
 
 
@@ -68,7 +68,7 @@ ggplot(data=gato ,aes(x=year,y=(expenditure),colour=(Country.Name)))+theme_minim
 ```
 ```{r}
 
-gato<-prepare_data(file_name[2],use_log = FALSE)
+gato<-prepare_data(files[2],use_log = FALSE)
 colors.vector<- rev(c("#fa9fb5","#f768a1","#c51b8a","#7a0177"))
 
 title<- c("Gesundheitsausgaben pro Kopf in US $","$US")
@@ -96,23 +96,14 @@ df2$group<-as.factor(df2$group)
 
 
 
-```{r }
-p <- ggplot(df2,aes(x=Steuerfinanzierte.Gesundheitsausgaben,y=Ausgaben.von.Pflichtkrankenversicherungen))+  geom_text(check_overlap = TRUE,aes(label = CODE, colour = factor(group)),fontface = "bold", size = 5,show.legend = TRUE,font=TRUE) +labs(x='Steuerfinanzierte Gesundheitsausgaben (%)',y='Ausgaben von Pflichtkrankenversicherungen (%)')+theme(legend.title=element_blank())+labs(text = "")+scale_colour_brewer(palette = "Set2")#+geom_label(aes(fill = factor(group),label = CODE),size=2, colour = "white", fontface = "bold")
-#p<-p+geom_path(data=df_ell, aes(x=x, y=y,colour=group), size=0.5, linetype=1)
-p
-
-```
-
 ```{r, fig.width=8,fig.height=8}
-ggplot(df2)+  geom_point(aes(Steuerfinanzierte.Gesundheitsausgaben,Ausgaben.von.Pflichtkrankenversicherungen), size = 1, color = '#1a0000') +
+ggplot(df2)+  geom_point(aes(Steuerfinanzierte.Gesundheitsausgaben,Ausgaben.von.Pflichtkrankenversicherungen), size = 1,shape=21,fill = "grey", size = 2, stroke = 1, colour = 'black') +
   geom_label_repel(
     aes(Steuerfinanzierte.Gesundheitsausgaben, Ausgaben.von.Pflichtkrankenversicherungen, fill = factor(group), label = CODE),
-    fontface = 'bold', color = 'white', size = 2.5,
+     color = 'white', size = 2.5,
     box.padding = unit(0.15, "lines"),
     point.padding = unit(0.1, "lines"),
     segment.color = 'grey50'
   )+labs(x='Steuerfinanzierte Gesundheitsausgaben (%)',y='Ausgaben von Pflichtkrankenversicherungen (%)')+theme(legend.title=element_blank(),legend.position="bottom",legend.direction="vertical")+labs(text = "")+scale_fill_brewer(palette = "Set2") +coord_fixed()
-
-#+ scale_fill_manual(values = setNames(c("lightblue", "darkgreen",'pink'), levels(df2$group)))
 
 ```
