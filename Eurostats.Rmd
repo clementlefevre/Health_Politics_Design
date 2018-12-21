@@ -27,17 +27,17 @@ library(ggrepel)
   
 # Load World Map, Bosnia and Oceans
 ```{r}
-world.map <- readOGR(dsn="eurostats_data/ne_10m_admin_0_countries/",layer="ne_10m_admin_0_countries")
+world.map <- readOGR(dsn="data/countries/",layer="ne_10m_admin_0_countries")
 world.map <- world.map[world.map$CONTINENT %in% c('Europe','Africa','Asia'),]
 
 #world.map <- gSimplify(world.map, tol = 0.00002)
 world.map <- spTransform(world.map, CRS("+init=epsg:2154"))
 
-bosnia.map <- readOGR(dsn="eurostats_data/BIH_adm_shp/",layer="BIH_adm1")
+bosnia.map <- readOGR(dsn="data/bosnia/",layer="ba_10km")
 bosnia.map <- aggregate(bosnia.map)
 bosnia.map <- spTransform(bosnia.map, CRS("+init=epsg:2154"))
 
-ocean <- readOGR(dsn="eurostats_data/ne_50m_ocean/", layer="ne_50m_ocean")
+ocean <- readOGR(dsn="data/ocean/", layer="ne_50m_ocean")
 ocean <- spTransform(ocean, CRS("+init=epsg:2154"))
 
 ```
@@ -155,7 +155,7 @@ df.test <- create.data.per.profession(df,professions[3])
 
 # Rename Countries to match with World Map
 ```{r}
-EU_NUTS <- readOGR(dsn = "eurostats_data/NUTS_2010_60M_SH/Data", layer = "NUTS_RG_60M_2010")
+EU_NUTS <- readOGR(dsn = "data/europe/", layer = "NUTS_RG_60M_2010_3035")
 proj4string(EU_NUTS)
 
 EU_NUTS <- spTransform(EU_NUTS, CRS("+init=epsg:2154"))
