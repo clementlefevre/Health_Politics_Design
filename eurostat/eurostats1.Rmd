@@ -1,0 +1,51 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(readODS)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(stringr)
+
+df.doctors <- read_ods("eurostats.ods",sheet = "Medical doctors", skip = 3)
+df.nurse <- read_ods("eurostats.ods",sheet = "Nurses and midwives", skip = 3)
+df.dentist <- read_ods("eurostats.ods",sheet = "Dentists", skip = 3)
+```
+
+# tidy
+
+```{r}
+
+
+unit = "Per hundred thousand inhabitants"
+ploto <- function(df,title){
+  
+
+  df <- df %>% filter(!is.na(`2016`)& !is.na(`2006`))
+  
+  df.plot <- df %>% gather(key,value,-`GEO/TIME`) %>% filter((key=="2006")|(key=="2016"))
+  df.plot$`GEO/TIME` <- str_replace_all(df.plot$`GEO/TIME`,"^.*Germany.*$","Germany")
+    
+ggplot(df.plot,aes(`GEO/TIME`,value,fill=factor(key))) + geom_bar(stat = 'identity',position = 'dodge')+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1 ,vjust=0.5,))+
+   theme(legend.title = element_blank()) +
+  ggtitle(title)+
+  ylab(unit)+xlab("")+
+  theme(legend.position="top")
+
+#return (df.plot)
+}
+
+```
+
+```{r}
+ploto(df.doctors, "Medical Doctors")
+```
+
