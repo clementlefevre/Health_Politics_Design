@@ -22,6 +22,7 @@ library(xlsx)
 ## load data
 ```{r}
 source('services/data_preparation.R')
+source('services/plotting_service.R')
 
 data.nuts2 <- load.nurses.phys.data(geo.level = 4)
 data.nuts1 <- load.nurses.phys.data(geo.level = 2)
@@ -93,24 +94,6 @@ direction=c("both"))
 summary(modselect_aic)
 ```
 
-```{r}
-df.model.n.samples<-df.nuts2 %>% drop_na()  %>% 
-  group_by(country.code,isco08,year) %>% summarise(observations=n()) 
-
-
-df.model.rsquared <-df.nuts2 %>% drop_na()  %>% 
-  group_by(country.code,isco08,year) %>% 
-  do(glance(lm(formula, data = .))) 
-
-df.model.coef <-df.nuts2 %>% drop_na()  %>% 
-  group_by(country.code,isco08,year) %>% 
-  do(tidy(lm(formula, data = .)))   %>% slice(2)
-
-df.model <- merge(df.model.n.samples,df.model.rsquared,by=c('country.code','isco08','year'))
-df.model <- merge(df.model,df.model.coef,by=c('country.code','isco08','year'),suffixes=c(".r2", ".coef"))
-
-write.xlsx(df.model,'linear_model_nurses_phys_pop_density.xlsx')
-```
 
 
 ## model
@@ -133,174 +116,22 @@ df.model.coef <-df.cagr.spreado %>% drop_na()  %>%
   do(tidy(lm(OC221~OC222_322, data = .)))  %>% slice(2)
 ```
 
-# nurses density vs doctos density
+# nurses density vs doctors density
 
-
-
+## per country
 ```{r}
-data.density <- data %>% spread(isco08,values) %>% drop_na() %>% arrange(year)
-
-
-
-data.density<- data.density# %>% filter(country.code=='FR')#  & geo=='CZ01')
-
-data.density$legend.name <- str_replace(data.density$geo.name,"\\(NUTS 2013","")
-data.density$legend.name <- str_replace(data.density$legend.name,"\\)","")
-
-
-data.density <- data.density %>% group_by(geo) %>% mutate(text.plot = paste0(legend.name,' (',first(year),'-',last(year),')'))
-
-
-
- 
-
+data <- prepare.data(df.nuts1)
+plot.density.scatter.timeline.countries(data)
 ```
 
-```{r}
-
-
-plot.density.scatter.timeline <- function(code.country) {
-  data <- data.density# %>% filter(country.code==code.country)
-  
-  data.range.start <- data %>%
-    group_by(geo) %>%
-    arrange(year) %>%
-    filter(row_number() == 1)
-  
-  data.range.stop <- data %>%
-    group_by(geo) %>%
-    arrange(year) %>%
-    filter(row_number() == n())
-  
-  data.range.stop.second <- data.range.stop
-  
-  over.countries <- as.factor(c('IT','ES','BG','CZ','SK','HU','HR'))
-  
-  data.range.stop <-
-    data.range.stop %>% mutate(text.plot = ifelse(country.code %in% over.countries, country.code, text.plot))
-  
-  data.range.stop.second <- data.range.stop.second %>% filter(country.code %in% over.countries)
-  
-  data.range.stop.second$index <- as.numeric(row.names(data.range.stop.second))
-  print(data.range.stop.second)
-  data.range.stop.second$index <- 1700-50*data.range.stop.second$index
-  
-  data.range.stop.second <-
-    data.range.stop.second %>% mutate(OC221 = ifelse(country.code %in% over.countries, 550, OC221)) %>% mutate(OC222_322 =                                                                                        ifelse(country.code %in%over.countries, index, OC222_322))
-  
-  print(data.range.stop.second)
-  
-  
-  
-  p <- ggplot(data, aes(OC221, OC222_322, group = legend.name))
-  p <- p +
-    geom_point(data = data.range.start,
-               color = 'black',
-               size = 1) +
-    
-    geom_point(
-      data = data.range.stop,
-      color = 'black',
-      size = 2,
-      shape = 21
-    ) +
-    geom_point(
-      data = data.range.start,
-      color = 'black',
-      size = 1,
-      shape = 1
-    ) +
-    theme_bw() +    ylab("Nurses & Midwives per 100.000") +
-    xlab("Doctors  per 100.000") +  labs(color = paste(sprintf('\u2022'), 'from ', sprintf('\u25e6'), 'to')) +
-    
-    geom_path(aes(color = text.plot)) + #theme(legend.position = "bottom") +
-    
-    
-    # add only for countries level, not for NUTS2
-    geom_text(
-      data = data.range.stop,
-      aes(label = text.plot, colour = factor(geo.name)),
-      hjust = 1,
-      nudge_x = 0,
-      vjust = -1,
-      nudge_y = 0,
-      size = 2,
-      check_overlap = TRUE
-    ) +
-    geom_text(
-      data = data.range.stop.second,
-      aes(label = text.plot, colour = factor(geo.name)),
-      hjust = 0,
-      nudge_x = 0,
-      vjust = 0,
-      nudge_y = 0,
-      size = 2,
-      check_overlap = FALSE
-    ) +
-    #theme(legend.text = element_text(size = 4))
-    theme(legend.position = "none")# + coord_flip()
-  #coord_equal() +xlim(c(0,1600)) + ylim(c(0,1600))+
-  
-  ggsave(paste0(code.country, '.png'), p)
-  return(p)
-}
-plot.density.scatter.timeline('all_UE')
-```
-
-
-```{r}
-plot.density.scatter.timeline.nuts2 <- function(code.country) {
-  data <- data.density %>% filter(country.code==code.country)
-  
-  data.range.start <- data %>%
-    group_by(geo) %>%
-    arrange(year) %>%
-    filter(row_number() == 1)
-  
-  data.range.stop <- data %>%
-    group_by(geo) %>%
-    arrange(year) %>%
-    filter(row_number() == n())
-  
-  
-  p <- ggplot(data, aes(OC221, OC222_322, group = legend.name))
-  p <- p +
-    geom_point(data = data.range.start,
-               color = 'black',
-               size = 1) +
-    
-    geom_point(
-      data = data.range.stop,
-      color = 'black',
-      size = 2,
-      shape = 21
-    ) +
-    geom_point(
-      data = data.range.start,
-      color = 'black',
-      size = 1,
-      shape = 1
-    ) +
-    theme_bw() +    ylab("Nurses & Midwives per 100.000") +
-    xlab("Doctors  per 100.000") +  labs(color = paste(sprintf('\u2022'), 'from ', sprintf('\u25e6'), 'to')) +
-    
-    geom_path(aes(color = text.plot)) +#theme(legend.position = "bottom") +
-    
-  
-
-    theme(legend.text = element_text(size = 4))
-   
-    
-  ggsave(paste0(code.country, '.png'), p)
-  return(p)
-}
-
-```
+## per region
 
 ```{r}
 
-for(country in codes.countries){
-  plot.density.scatter.timeline.nuts2(country)
+data <- prepare.data(df.nuts2)
+for(country in data.nuts1$codes.countries$code){
+  print(country)
+ plot.density.scatter.timeline.region(data,country)
 }
 ```
 

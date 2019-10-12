@@ -23,7 +23,12 @@ load.countries.info <- function() {
   names(norway) <- names(countries.with.code)
   turkey <- data.frame('Turkey', 'TR', '')
   names(turkey) <- names(countries.with.code)
-  countries.with.code <- rbind(countries.with.code, norway, turkey)
+  
+  switzerland <- data.frame('Switzerland', 'CH', '')
+  names(switzerland) <- names(countries.with.code)
+  
+  
+  countries.with.code <- rbind(countries.with.code, norway, turkey, switzerland)
   codes.countries <- countries.with.code$code
   
   return (countries.with.code)
@@ -88,9 +93,10 @@ load.pop.structure<- function(geo.level){
   
   df<- df %>% filter(year>=2005 & year <=2016)
   
-  exclude.age <- c('TOTAL','UNK','Y_GE75','Y_GE80')
+  exclude.age <- NULL # c('TOTAL','UNK','Y_GE75','Y_GE80')
   
-  df <- df %>% filter(!age  %in% exclude.age & sex=='T') %>% group_by(geo,sex,year) %>% mutate(age.ratio=values/sum(values)*100)
+  ages.of.interest <- c('TOTAL', 'UNK', 'Y10-14', 'Y15-19', 'Y20-24', 'Y25-29', 'Y30-34', 'Y35-39', 'Y40-44', 'Y45-49', 'Y5-9', 'Y50-54', 'Y55-59', 'Y60-64', 'Y65-69', 'Y70-74', 'Y75-79', 'Y80-84', 'Y_GE75', 'Y_GE80', 'Y_GE85', 'Y_LT5')
+  df <- df %>% filter(age  %in% ages.of.interest & sex=='T') %>% group_by(geo,sex,year) %>% mutate(age.ratio=values/sum(values)*100)
   df <- df %>% select(-unit,-time,-values)
   
   df <- df %>% mutate(sex.age = paste(sex,age,sep='_')) %>% ungroup() %>%   select(-age,-sex)
@@ -136,11 +142,11 @@ load.gdp <- function(geo.level=4){
 
 
 load.nurses.phys.data <-
-  function(geo.level = 4) {
+  function(geo.level = 4,cache=TRUE) {
     data <- NULL
     data$codes.countries <- load.countries.info()
     
-    df <- get_eurostat('hlth_rs_prsrg',  stringsAsFactors = FALSE)
+    df <- get_eurostat('hlth_rs_prsrg',  stringsAsFactors = FALSE,cache=cache)
     
     df <-
       df %>% filter(isco08 %in%        c('OC222_322', 'OC221')) %>% filter(nchar(geo) == geo.level) %>% filter(unit ==

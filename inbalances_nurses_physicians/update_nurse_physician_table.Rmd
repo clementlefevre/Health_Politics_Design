@@ -1,0 +1,261 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(eurostat)
+library(tidyverse)
+library(xlsx)
+
+
+USE_CACHE=TRUE
+```
+
+# load data
+```{r}
+df <-
+  get_eurostat('hlth_rs_prsrg',
+               stringsAsFactors = FALSE,
+               cache = USE_CACHE)
+
+df$year <- lubridate::year(df$time)
+df$country.code <- str_sub(df$geo, 1, 2)
+
+df <-
+  df %>% filter(isco08 %in% c('OC222_322', 'OC221')) %>% filter(unit =='P_HTHAB' & year>2004)
+
+df.region <- df %>% filter(nchar(geo) >= 3)
+
+labels_OC  <- label_eurostat(df.region%>% select(isco08))
+colnames(labels_OC)<- c('variable')
+
+regions <- label_eurostat(df.region %>% select(geo), fix_duplicated = T)
+colnames(regions)<- c('region')
+countries <- label_eurostat(df.region$country.code, dic='geo',fix_duplicated = T) %>% as.data.frame()
+colnames(countries)<- c('country')
+
+df.clean <- cbind(labels_OC,df.region,regions,countries) %>% select(-unit, -time)
+df.clean$country<- as.character(df.clean$country)
+df.clean$country[grepl("Germany", df.clean$country, ignore.case=FALSE)]<-"Germany"
+
+df.physicians <- df.clean %>% filter(isco08=='OC221') #%>% spread(year,values)
+df.nurses <- df.clean %>% filter(isco08=='OC222_322')#%>% spread(year,values)
+
+```
+
+## filter on specific countries
+```{r}
+countries <- read.csv('data/countries_filter.csv',sep=';')
+
+df.physicians <-df.physicians %>% filter(country %in% unique(countries$OC221))
+df.nurses <-df.nurses %>% filter(country %in% unique(countries$OC222_322))
+```
+
+# get the latest year with data
+```{r}
+latest_year_phys <- df.physicians %>% group_by(country.code)%>% summarise(latest_year = first(year))
+
+latest_year_nurses <- df.nurses %>% group_by(country.code)%>% summarise(latest_year = first(year))
+```
+
+# get the population density per region
+```{r}
+
+df.density.3 <- get_eurostat('demo_r_d3dens',stringsAsFactors = F) %>% filter(str_length(geo)==3 & str_detect(geo,'DE'))
+df.density <- get_eurostat('tgs00024',cache=USE_CACHE)
+df.density<- rbind(df.density.3,df.density) %>% distinct(geo,time,values)
+
+df.density$year <- lubridate::year(df.density$time)
+df.density <- df.density %>% select(geo,values,year)
+df.density$country.code <- str_sub(df.density$geo, 1, 2)
+
+label_density <- label_eurostat(df.density%>% select(geo),fix_duplicated = T)
+
+df.density<-cbind(df.density,label_density)
+# merge with data
+df.physicians.density <- merge(latest_year_phys,df.density,by.x=c('latest_year','country.code'),by.y=c('year','country.code'))
+
+df.nurses.density <- merge(latest_year_nurses,df.density,by.x=c('latest_year','country.code'),by.y=c('year','country.code'))
+
+# filter on region with health data:
+df.physicians.density <- df.physicians.density %>% filter(geo %in% unique(df.physicians$geo))
+df.nurses.density <- df.nurses.density %>% filter(geo %in% unique(df.nurses$geo))
+
+# find the min/max pop density region per country
+groupy.density.phys <- df.physicians.density %>% group_by(country.code,latest_year)%>% summarise(max_density_geo=geo[which.max(values)],min_density_geo =geo[which.min(values)],max_density=max(values),min_density=min(values) ) %>% ungroup()
+
+groupy.density.nurses <- df.nurses.density   %>% group_by(country.code,latest_year)%>% summarise(max_density_geo=geo[which.max(values)],min_density_geo =geo[which.min(values)],max_density=max(values),min_density=min(values) ) %>% ungroup()#%>% gather(key,value,-country.code,-latest_year) 
+
+# set the population density per region for the latest year:
+max_density_phys <- groupy.density.phys %>% select(max_density_geo,max_density,latest_year)
+min_density_phys <- groupy.density.phys%>% select(min_density_geo,min_density,latest_year)
+colnames(max_density_phys)<- c('geo','pop_density','latest_year')
+colnames(min_density_phys)<- c('geo','pop_density','latest_year')
+density.phys <-bind_rows(max_density_phys,min_density_phys)
+
+max_density_nurses <- groupy.density.nurses %>% select(max_density_geo,max_density,latest_year)
+min_density_nurses <- groupy.density.nurses%>% select(min_density_geo,min_density,latest_year)
+colnames(max_density_nurses)<- c('geo','pop_density','latest_year')
+colnames(min_density_nurses)<- c('geo','pop_density','latest_year')
+density.nurses <-bind_rows(max_density_nurses,min_density_nurses)
+
+
+```
+# filter data on min/max pop density regions
+```{r}
+region_to_filter.phys <- groupy.density.phys%>% select(country.code,max_density_geo,min_density_geo)%>% gather(key,value,-country.code) 
+
+df.phys.filtered <- merge(region_to_filter.phys  %>% select(geo=value) ,df.physicians,by='geo')
+
+region_to_filter.nurses <- groupy.density.nurses%>% select(country.code,max_density_geo,min_density_geo)%>% gather(key,value,-country.code) 
+
+df.nurses.filtered <- merge(region_to_filter.nurses  %>% select(geo=value) ,df.nurses,by='geo')
+```
+
+# spread data per year
+```{r}
+df.phys.spread <- df.phys.filtered %>% spread(year,values)
+df.nurses.spread <- df.nurses.filtered %>% spread(year,values)
+```
+
+## add pop density
+
+```{r}
+df.phys <- merge(df.phys.spread,density.phys,by='geo')
+df.nurses <- merge(df.nurses.spread,density.nurses,by='geo')
+```
+
+
+# and now Ladies & Gentleman, the same on the country level :
+```{r}
+
+# first get the health data
+df.countries <- df %>% filter(str_length(geo)==2)
+countries.phys =label_eurostat(df.countries %>% select(geo),dic='geo',fix_duplicated = T)
+colnames(countries.phys)<-c('country.name')
+df.countries <- cbind(countries.phys,df.countries)
+df.countries$country.name[grepl("Germany", df.countries$country.name, ignore.case=FALSE)]<-"Germany"
+
+countries.phys <- df.countries %>% filter(country.name %in% countries$OC221) %>% filter(isco08=='OC221')%>% select(-time,-country.code,-unit)
+country.phys.label <- label_eurostat(countries.phys %>% select(isco08))
+names(country.phys.label) <- c('variable')
+countries.phys <- cbind(country.phys.label,countries.phys)
+countries.phys <-countries.phys %>% spread(year,values)
+
+
+countries.nurses <- df.countries %>% filter(country.name %in% countries$OC222_322) %>% filter(isco08=='OC222_322')%>% select(-time,-country.code,-unit)
+country.nurses.label <- label_eurostat(countries.nurses %>% select(isco08))
+names(country.nurses.label) <- c('variable')
+countries.nurses <- cbind(country.nurses.label,countries.nurses)
+countries.nurses <-countries.nurses %>% spread(year,values)
+```
+
+# then the pop density
+
+```{r}
+df.density.countries <- get_eurostat("tps00003",stringsAsFactors = F,cache=USE_CACHE)
+df.density.countries$year <- lubridate::year(df.density.countries$time)
+df.density.countries <- df.density.countries %>% select(-time,-unit)
+
+year_to_filter_phys <- groupy.density.phys %>% select(country.code,latest_year)%>% distinct()
+year_to_filter_nurses <- groupy.density.nurses %>% select(country.code,latest_year)%>% distinct()
+
+df.density.countries.phys <-merge(year_to_filter_phys,df.density.countries,by.x=c('country.code','latest_year'),by.y=c('geo','year'))
+
+df.density.countries.nurses <-merge(year_to_filter_nurses,df.density.countries,by.x=c('country.code','latest_year'),by.y=c('geo','year'))
+
+```
+# merge countries health & pop density
+```{r}
+df.countries.phys <- merge(countries.phys,df.density.countries.phys %>% select(pop_density=values,country.code,latest_year),by.='geo',by.y='country.code')
+
+df.countries.nurses <- merge(countries.nurses,df.density.countries.nurses %>% select(pop_density=values,country.code,latest_year),by.='geo',by.y='country.code')
+```
+
+
+# rename columns and concat regions with countries data:
+```{r}
+df.countries.phys <-df.countries.phys %>% select(geo,variable,isco08,country=country.name,everything())
+df.countries.phys$country.code <- df.countries.phys$geo
+df.countries.phys$region<- ""
+
+df.phys.all <- bind_rows(df.phys,df.countries.phys)
+df.phys.all<- df.phys.all%>% arrange(country.code,region)
+
+
+df.countries.nurses <-df.countries.nurses %>% select(geo,variable,isco08,country=country.name,everything())
+df.countries.nurses$country.code <- df.countries.nurses$geo
+df.countries.nurses$region<- ""
+
+df.nurses.all <- bind_rows(df.nurses,df.countries.nurses) %>% arrange(country.code,region)
+```
+
+## add percentage evolution and CAGR:
+```{r}
+
+
+computeGrowthAndCAGR <- function(v) {
+  
+  NonNAindex <- which(!is.na(v))
+  
+  min.index <- min(NonNAindex)
+  max.index <- max(NonNAindex)
+  
+  first_valid_year <- names(v[min.index])
+  last_valid_year <- names(v[max.index])
+  
+  v0 <- v[min.index]
+  v1 <- v[max.index]
+  #browser()
+  lengtho <- length(NonNAindex) - 1
+  growth <- (v1 - v0) / v0 * 100
+  CAGR <- (((v1 / v0) ^ (1 / lengtho) - 1) * 100)
+  
+  return(setNames(c(v0,v1,lengtho,
+    min(NonNAindex),
+    max(NonNAindex),
+    first_valid_year,
+    last_valid_year,
+    growth,
+    CAGR
+  ),c('v0','v1','years_count','y0','y1','min','max','growth','CAGR')))
+  
+}
+
+growth.CAGR.phys <- apply( df.phys.all %>% dplyr::select(`2005`:`2017`), 1, computeGrowthAndCAGR) %>% as.data.frame()%>% t()
+
+
+growth.CAGR.nurses <- apply( df.nurses.all %>% dplyr::select(`2005`:`2015`), 1, computeGrowthAndCAGR) %>% as.data.frame()%>% t()
+
+df.phys.all.with.growth<-cbind(df.phys.all,growth.CAGR.phys)
+df.nurses.all.with.growth<-cbind(df.nurses.all,growth.CAGR.nurses)
+
+```
+
+# sort per country/region/pop density
+```{r}
+sortData<- function(df){
+df<-df %>% group_by(country.code) %>% mutate(level=ifelse(str_length(geo)==2,'countryLevel','regionLevel'))
+df <- df %>% group_by(country.code,level)%>% mutate(rank=order(pop_density, decreasing=TRUE))%>% 
+arrange(level,(rank),.by_group = TRUE)  
+return(df)
+}
+
+df.phys.all.with.growth <- sortData(df.phys.all.with.growth)
+df.nurses.all.with.growth<- sortData(df.nurses.all.with.growth)
+
+
+```
+# save this amazing piece of art: ("R is so faster than Excel, i need three hours to do that...well a little bit more in fact(6 hours))
+```{r}
+write.xlsx(as.data.frame(df.phys.all.with.growth), file="data/updated_phys_nurses_growth_CAGR.xlsx", sheetName="physicians", row.names=FALSE)
+write.xlsx(as.data.frame(df.nurses.all.with.growth), file="data/updated_phys_nurses_growth_CAGR.xlsx", sheetName="nurses_midwives", row.names=FALSE,append = T)
+
+
+```
+
