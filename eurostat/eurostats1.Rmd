@@ -1,0 +1,98 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(readODS)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(stringr)
+
+df.doctors <- read_ods("eurostats.ods",sheet = "Medical doctors", skip = 3)
+df.nurses <- read_ods("eurostats.ods",sheet = "Nurses and midwives", skip = 3)
+df.dentists <- read_ods("eurostats.ods",sheet = "Dentists", skip = 3)
+
+lista <- list("Doctors"=df.doctors,"Dentists"=df.dentists,"Nurses" = df.nurses)
+
+lista <- lapply(lista, function(x) {
+  x$`GEO/TIME` <-str_replace_all(x$`GEO/TIME`,"^.*Germany.*$","Germany")
+  return(x)})
+
+
+```
+
+
+# retrieve first and last data per country
+```{r}
+prepare_data <- function(df) {
+  names(df)[names(df) == "GEO/TIME"] <- "country"
+  df.gato <- df %>% gather(key, value, -country)
+  df.gato$key <- as.numeric(df.gato$key)
+  
+  df.groupy <-
+  df.gato  %>% group_by(country) %>% filter(value != '') %>%  summarise(
+  start_value = first(value),
+  end_value = last(value),
+  first_year = first(key, order_by = key),
+  last_year = last(key, order_by = key)
+  )
+  
+  df.groupy <-
+  df.groupy %>% mutate(country = ifelse(last_year < 2016, paste0(country, " (", last_year, ")"), country))
+  
+  df.groupy <-
+  df.groupy %>% filter(!grepl("European Union", country))
+  df.gato2 <-
+  df.groupy %>% gather(key, value, -country) %>% filter(grepl("value", key))
+  ordered_countries <-
+  df.gato2 %>% filter(key == 'end_value') %>% arrange(desc(value)) %>% select(country) %>% pull(country)
+  df.gato2$country <-
+  factor(df.gato2$country, levels = ordered_countries)
+  df.gato2$key <-
+  factor(df.gato2$key, levels = c('start_value', 'end_value')) # notice the changed order of factor levels
+  
+  
+  return (df.gato2)
+}
+
+lista_prepared <- lapply(lista,prepare_data)
+
+
+
+```
+
+
+plot sorted by last year's value
+```{r}
+unit = "Per hundred thousand inhabitants"
+
+plot_chart <- function(df,title){
+  
+  p <-ggplot(df,aes(country,value,fill=key)) + geom_bar(stat = 'identity',position = position_dodge(width=0.5))+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1 ,vjust=0.5))+
+scale_fill_manual(labels = c("2006", "2016"), values = c("#7ac406", "#49742c")) +
+ 
+  ggtitle(title)+
+  ylab('')+xlab("")+
+  theme(legend.position="top")+
+  guides(fill=guide_legend(title=unit))
+  print(p)
+  
+}
+
+i=1
+for (l in lista_prepared){
+  title <- names(lista_prepared)[[i]]
+                 print(title)
+  plot_chart(l,title)
+  i <- i+1
+}
+
+ 
+```

@@ -1,0 +1,124 @@
+---
+title: "Public Health Data - World Bank"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggthemes)
+library(ggrepel)
+library(scales)
+library(ellipse)
+
+
+```
+
+
+
+# Get data
+```{r}
+
+files<-c('data/API_SH.XPD.PCAP_DS2_en_csv_v2.csv','data/API_SH.XPD.PUBL_DS2_en_csv_v2.csv')
+
+prepare_data<-function(file_name,use_log){
+  df1<- read.csv(file_name,skip = 4,stringsAsFactors = FALSE)
+  
+  missing.years<- c(1960:1994,2015:2016)
+  missing.years.columns<- paste0("X",missing.years)
+  valid.years<- c(1995:2014)
+  valid.years.columns<- paste0("X",valid.years)
+  df1<-df1 %>% select(-one_of(missing.years.columns))
+  
+  ## drop the countries with missing data
+  df1<-df1 %>% filter(!is.na(X1995))
+  df1 <-df1 %>% filter(grepl("Low income|Lower middle income|Upper middle income|High income",Country.Name))
+  
+  df1 <- df1 %>% select(one_of(c("Country.Name",valid.years.columns))) 
+  
+  #Transpose
+  gato<-df1 %>% gather(year,expenditure,-Country.Name)
+  gato <- gato %>% mutate(year=as.numeric(gsub('X','',year)))
+  gato$Country.Name <- as.factor(gato$Country.Name)
+  gato$Country.Name <- factor(gato$Country.Name,  levels=rev(c("Low income","Lower middle income","Low & middle income","Middle income", "Upper middle income","High income")))
+  
+  if(use_log){
+    gato$expenditure_log<-log(gato$expenditure)
+  }
+
+return(gato)
+}
+
+```
+
+
+```{r}
+
+gato<-prepare_data(files[1],TRUE)
+colors.vector<- rev(c("#fa9fb5","#f768a1","#c51b8a","#7a0177"))
+
+title<- c("Gesundheitsausgaben pro Kopf in Dollar","Konstanter 2011 Dollar (international, KKP)")
+#title<- c("Öffentliche Gesundheitsausgaben als Anteil der Gesamtgesundheitsausgaben","%")
+
+
+ggplot(data=gato ,aes(x=year,y=(expenditure),colour=(Country.Name)))+theme_minimal()+ geom_line(size=1)+labs(colour="")+ theme(axis.title = element_text(), axis.title.x=element_blank(), axis.text.x = element_text(angle = 90, hjust = 1),legend.text=element_text(size=10),plot.caption=element_text(size=8))+ ggtitle(title[1])+ylab(title[2]) + scale_colour_manual(values = colors.vector, labels = (c("Länder mit hohem Einkommen","Länder mit gehobenem mittleren Einkommen","Länder mit niedrigem mittleren Einkommen","Länder mit niedrigem Einkommen")))+  guides(fill = guide_legend(nrow = 2,ncol = 2, title.hjust = 0.4))+  guides(col = guide_legend(nrow = 2))+  theme(legend.position="bottom")+ scale_y_log10(breaks=c(.01,.1,10,100,1000,2000,3000,5000)) + annotation_logticks(sides='r')
+
+ggsave(paste(title[1],'.png',sep=''),dpi = 300)
+
+```
+
+
+
+
+```{r}
+
+gato<-prepare_data(files[2],use_log = FALSE)
+colors.vector<- rev(c("#fa9fb5","#f768a1","#c51b8a","#7a0177"))
+
+title<- c("Gesundheitsausgaben pro Kopf in US $","$US")
+title<- c("Öffentliche Gesundheitsausgaben als Anteil der Gesamtgesundheitsausgaben","%")
+
+
+ggplot(data=gato ,aes(x=year,y=(expenditure),colour=(Country.Name)))+theme_minimal()+ geom_line(size=1)+labs(colour="")+ theme(axis.title = element_text(), axis.title.x=element_blank(), axis.text.x = element_text(angle = 90, hjust = 1),legend.text=element_text(size=10),plot.caption=element_text(size=8))+ ggtitle(title[1])+ylab(title[2]) + scale_colour_manual(values = colors.vector, labels = (c("Länder mit hohem Einkommen","Länder mit gehobenem mittleren Einkommen","Länder mit niedrigem mittleren Einkommen","Länder mit niedrigem Einkommen")))+  guides(fill = guide_legend(nrow = 2,ncol = 2, title.hjust = 0.4))+  guides(col = guide_legend(nrow = 2))+  theme(legend.position="bottom")
+
+ggsave(paste(title[1],'.png',sep=''),dpi = 300)
+
+  
+```
+
+```{r}
+df2<-read.csv('data/dataset2.csv',stringsAsFactors = FALSE)
+df2<- df2 %>% mutate(Ausgaben.von.Pflichtkrankenversicherungen = ifelse(is.na(Ausgaben.von.Pflichtkrankenversicherungen),0,Ausgaben.von.Pflichtkrankenversicherungen))
+
+df2<- df2 %>% mutate(Steuerfinanzierte.Gesundheitsausgaben = ifelse(is.na(Steuerfinanzierte.Gesundheitsausgaben),0,Steuerfinanzierte.Gesundheitsausgaben))
+
+
+CODE_TO_EXCLUDE_FROM_ELLIPSE = c('MEX','US','GRE')
+df2<-df2 %>% mutate(group=ifelse(Steuerfinanzierte.Gesundheitsausgaben<35,"Sozialversicherungssysteme","Steuerfinanzierte Systeme"))
+df2<-df2 %>% mutate(group=ifelse(CODE %in% CODE_TO_EXCLUDE_FROM_ELLIPSE,"-",group))
+df2$group<-as.factor(df2$group)
+
+
+```
+
+
+
+```{r, fig.width=8,fig.height=8}
+ggplot(df2)+  geom_point(aes(Steuerfinanzierte.Gesundheitsausgaben,Ausgaben.von.Pflichtkrankenversicherungen), size = 1,shape=21,fill = "grey", size = 2, stroke = 1, colour = 'black') +
+  geom_label_repel(
+    aes(Steuerfinanzierte.Gesundheitsausgaben, Ausgaben.von.Pflichtkrankenversicherungen, fill = factor(group), label = CODE),
+     color = 'white', size = 2.8,
+    box.padding = unit(0.15, "lines"),
+    point.padding = unit(0.1, "lines"),
+    segment.color = 'grey50'
+  )+labs(x='Steuerfinanzierte Gesundheitsausgaben (%)',y='Ausgaben von Pflichtkrankenversicherungen (%)')+theme(legend.title=element_blank(),legend.position="bottom",legend.direction="vertical")+labs(text = "") +coord_fixed()+scale_fill_brewer(palette = "Set2",breaks=c("Sozialversicherungssysteme","Steuerfinanzierte Systeme"))
+
+ggsave(paste("Steuerfinanzierte Gesundheitsausgaben_vs_Ausgaben von Pflichtkrankenversicherungen",'.png',sep=''),dpi = 300)
+
+
+```
