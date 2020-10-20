@@ -1,0 +1,41 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+Sys.setenv(LANG = "en")
+Sys.setlocale("LC_TIME", "English")
+library(openxlsx)
+library(data.table)
+library(zoo)
+library(lubridate)
+library(ggplot2)
+library(plotly)
+library(ggthemes)
+```
+
+```{r}
+DT <-  openxlsx::read.xlsx("data/daily_national_incidence_2020-10-15.xlsx")
+setDT(DT)
+DT[,date:=as.Date(date),]
+countries <-  c("Austria", "Belgium", "France", "Luxembourg", "Netherlands", "Germany", "Slovenia", "Switzerland")
+dt_from <-   as.Date("2020-03-01")
+dt_to <- as.Date("2020-10-10")
+
+DT <- DT[country %in% countries & date>=dt_from & date<=dt_to & indicator =="confirmed cases"][order(date)]
+
+DT[, "ravg_" := lapply(.SD, rollmean, k = 14, na.pad = TRUE), 
+   by = country, .SDcols = c("rate_14_day")]
+
+```
+
+```{r}
+g <- ggplot(DT, aes(date,rate_14_day, color=country))+ geom_line(size=1) + scale_color_brewer(palette="Set1") + theme_fivethirtyeight()+theme(legend.title=element_blank())+ labs(title = "14 days notification rate of newly reported COVID19 Cases ",
+              subtitle = "per 100 000 population",
+              caption = "Data source:                       ")
+g
+ggsave("Covid19_1.png", scale=2, dpi=300, width=10,height = 6, units='cm')
+```
+
