@@ -19,26 +19,26 @@ library(ggthemes)
 ```
 OLD DATA SOURCE : https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide
 ```{r}
-DT_old <- fread("data_old.csv")
-
-
-DT_old[,date:=as.Date(dateRep, "%d/%m/%Y")]
-
-
-countries <- c("Austria", "Belgium", "France", "Luxembourg", "Netherlands", "Germany", "Slovenia", "Switzerland")
-dt_from <- as.Date("2020-02-01")
-dt_to <- as.Date("2020-11-28")
-
-DT_old <- DT_old[countriesAndTerritories %in% countries & date >= dt_from & date <= dt_to][order(date)]
-DT_old <-  DT_old[,c("countriesAndTerritories","date", "cases", "deaths")]
-
-DT_old.cases <- DT_old[, "ravg_" := lapply(.SD, rollmean, k = 14, na.pad = TRUE),
-  by = countriesAndTerritories, .SDcols = c("cases")
-]
-
-DT_old.death <-  DT_old[, "ravg_" := lapply(.SD, rollmean, k = 14, na.pad = TRUE),
-  by = countriesAndTerritories, .SDcols = c("deaths")
-]
+# DT_old <- fread("data_old.csv")
+# 
+# 
+# DT_old[,date:=as.Date(dateRep, "%d/%m/%Y")]
+# 
+# 
+# countries <- c("Austria", "Belgium", "France", "Luxembourg", "Netherlands", "Germany", "Slovenia", "Switzerland")
+# dt_from <- as.Date("2020-02-01")
+# dt_to <- as.Date("2020-11-28")
+# 
+# DT_old <- DT_old[countriesAndTerritories %in% countries & date >= dt_from & date <= dt_to][order(date)]
+# DT_old <-  DT_old[,c("countriesAndTerritories","date", "cases", "deaths")]
+# 
+# DT_old.cases <- DT_old[, "ravg_" := lapply(.SD, rollmean, k = 14, na.pad = TRUE),
+#   by = countriesAndTerritories, .SDcols = c("cases")
+# ]
+# 
+# DT_old.death <-  DT_old[, "ravg_" := lapply(.SD, rollmean, k = 14, na.pad = TRUE),
+#   by = countriesAndTerritories, .SDcols = c("deaths")
+# ]
 ```
 
 
@@ -60,18 +60,18 @@ dt_to <- as.Date("2020-11-28")
 DT.cases <- DT[country %in% countries & date >= dt_from & date <= dt_to & indicator == "cases"][order(date)]
 DT.death <- DT[country %in% countries & date >= dt_from & date <= dt_to & indicator == "deaths"][order(date)]
 
-DT.cases[, "ravg_" := lapply(.SD, rollmean, k = 14, na.pad = TRUE),
+DT.cases[, "ravg_" := lapply(.SD, rollmean, k = 2, na.pad = TRUE),
   by = country, .SDcols = c("rate_14_day")
 ]
 
-DT.death[, "ravg_" := lapply(.SD, rollmean, k = 14, na.pad = TRUE),
+DT.death[, "ravg_" := lapply(.SD, rollmean, k = 2, na.pad = TRUE),
   by = country, .SDcols = c("rate_14_day")
 ]
 ```
 
 ```{r}
 options(scipen=10000)
-g <- ggplot(DT.cases, aes(date, weekly_count, color = country)) +
+g <- ggplot(DT.cases, aes(date, rate_14_day, color = country)) +
   geom_line(size = .8) +
   scale_color_brewer(palette = "Set1") +
   theme_fivethirtyeight() +
@@ -88,7 +88,7 @@ ggsave("Covid19_Cases.png", scale = 2, dpi = 300, width = 20, height = 12, units
 ```
 ```{r}
 options(scipen=10000)
-g <- ggplot(DT.death, aes(date, weekly_count, color = country)) +
+g <- ggplot(DT.death, aes(date, rate_14_day, color = country)) +
   geom_line(size = .8) +
   scale_color_brewer(palette = "Set1") +
   theme_fivethirtyeight() +
