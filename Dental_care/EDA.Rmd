@@ -1,0 +1,64 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+Sys.setenv(LANG = "en")
+Sys.setlocale("LC_TIME", "English")
+library(openxlsx)
+library(data.table)
+library(ggplot2)
+library(ggthemes)
+library(bbplot)
+```
+
+```{r}
+DT <- openxlsx::readWorkbook("data/input/Data Dental HiT_2021.xlsx", sheet = 1, rows = seq(8, 30, 1))
+setDT(DT)
+
+DT[is.na(DT)] <- 0
+DT[, evolution := (`2018` - `2008`) / `2008` * 100]
+```
+
+```{r}
+DT[, Unit := NULL]
+DT[, X3 := NULL]
+DT[, `2019` := NULL]
+
+DT.m1 <- melt(DT,
+  measure.vars = c(
+    "2008", "2009", "2010", "2011", "2012", "2013",
+    "2014", "2015", "2016", "2017", "2018", "evolution"
+  ),
+  variable.name = "year", value.name = "value", variable.factor = F
+)
+# DT.m1[, year := as.numeric(year)]
+DT.m1[year == "evolution"]
+```
+
+```{r}
+ggplot(DT.m1[year != "evolution"], aes(as.numeric(year), value, color = as.factor(Country))) +
+  geom_line() +
+  facet_wrap(. ~ Country) +
+  theme(legend.position = "none")
+```
+
+
+
+```{r}
+DT.m1[, Country := as.factor(Country)]
+
+
+cols <- c('2008'="#d36651",'2018'="#5e2215")
+ggplot(DT[Country != "Switzerland"], aes(Country, `2008`)) +
+  geom_segment(aes(x = reorder(Country, `2018`), xend = reorder(Country, `2018`), y = `2008`, yend = `2018`), color = "#de6f70") +
+  geom_point(data=DT.m1[year %in% c("2008","2018") & Country != "Switzerland"],aes(x=Country,y = value, color=year)) +
+  #geom_point(aes(x=Country,y = `2018`), color = "deeppink", shape = 21, fill = "white", stroke = 1, size = 3, text = "2018") +
+  #theme_fivethirtyeight() +
+  labs(title = "Dental care 2008-2019", subtitle = "Per Capita (Euros)", caption = "Source:Manon") +ylim(c(0,450))+
+  coord_flip() +
+ 
+ 
+  scale_color_manual(values=cols)+ theme_fivethirtyeight()+ ylab("%")+ theme(axis.text.y = element_text(size=8)) 
+```
