@@ -56,9 +56,9 @@ ggplot(DT[Country != "Switzerland"], aes(Country, `2008`)) +
   geom_point(data=DT.m1[year %in% c("2008","2018") & Country != "Switzerland"],aes(x=Country,y = value, color=year)) +
   #geom_point(aes(x=Country,y = `2018`), color = "deeppink", shape = 21, fill = "white", stroke = 1, size = 3, text = "2018") +
   #theme_fivethirtyeight() +
-  labs(title = "Dental care 2008-2019", subtitle = "Per Capita (Euros)", caption = "Source:Manon") +ylim(c(0,450))+
+  labs(title = "", subtitle = "", caption = "") +ylim(c(0,450))+
   coord_flip() +
  
  
-  scale_color_manual(values=cols)+ theme_fivethirtyeight()+ ylab("%")+ theme(axis.text.y = element_text(size=8)) 
+  scale_color_manual(values=cols)+ theme_fivethirtyeight()+ ylab("%")+ theme(axis.text.y = element_text(size=8)) + theme(legend.title=element_blank())
 ```
