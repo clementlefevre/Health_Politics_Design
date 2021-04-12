@@ -13,12 +13,16 @@ library(data.table)
 library(ggplot2)
 library(ggthemes)
 library(bbplot)
+
+
 ```
 
 
 ```{r}
 
-plotChart <- function(name, sheetIndex) {
+plotChart <- function(sheetIndex) {
+  DT_raw <- openxlsx::readWorkbook("data/input/Dental_HIT.xlsx", sheet = sheetIndex, colNames = F)
+  plotTitle <- DT_raw$X1[[1]]
   DT <- openxlsx::readWorkbook("data/input/Dental_HIT.xlsx", sheet = sheetIndex, rows = seq(2, 30, 1))
   setDT(DT)
   DT[is.na(DT)] <- 0
@@ -42,27 +46,25 @@ plotChart <- function(name, sheetIndex) {
 
 
   cols <- c("2008" = "#d36651", "2018" = "#5e2215")
- p <-  ggplot(DT[Country != "Switzerland"], aes(Country, `2008`)) +
+  p <- ggplot(DT[Country != "Switzerland"], aes(Country, `2008`)) +
     geom_segment(aes(x = reorder(Country, `2018`), xend = reorder(Country, `2018`), y = `2008`, yend = `2018`), color = "#de6f70") +
     geom_point(data = DT.m1[year %in% c("2008", "2018") & Country != "Switzerland"], aes(x = Country, y = value, color = year)) +
     # geom_point(aes(x=Country,y = `2018`), color = "deeppink", shape = 21, fill = "white", stroke = 1, size = 3, text = "2018") +
     # theme_fivethirtyeight() +
-    labs(title = name, subtitle = "", caption = "") +
+    labs(title = plotTitle, subtitle = "", caption = "") +
     coord_flip() +
     scale_color_manual(values = cols) +
     theme_fivethirtyeight() +
     ylab("%") +
     theme(axis.text.y = element_text(size = 8)) +
     theme(legend.title = element_blank())
- 
- ggsave(paste0("data/",sheetIndex,".png"))
+
+  ggsave(paste0("data/", sheetIndex, ".png"))
 }
 ```
 
 ```{r}
-plotChart("Dental expenditure AS % OF TOTAL HEALTH EXPENDITURE", 1)
-plotChart("Public as % of total dental care expenditure", 2)
-plotChart("Dataset: Health expenditure and financing", 3)
-plotChart("Private as % of total", 4)
-plotChart("Self-reported unmet needs for dental examination by sex, age, main reason declared and income quintile [hlth_silc_09]", 5)
+sheets <- getSheetNames("data/input/Dental_HIT.xlsx")
+
+lapply(sheets, plotChart)
 ```
